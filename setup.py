@@ -57,6 +57,7 @@ setup(
             "t2kdm-get=t2kdm.commands:get.run_from_console",
             "t2kdm-put=t2kdm.commands:put.run_from_console",
             "t2kdm-check=t2kdm.commands:check.run_from_console",
+            "t2kdm-checkSE=t2kdm.commands:checkSE.run_from_console",
             "t2kdm-fix=t2kdm.commands:fix.run_from_console",
             "t2kdm-html-index=t2kdm.commands:html_index.run_from_console",
             "t2kdm-move=t2kdm.commands:move.run_from_console",

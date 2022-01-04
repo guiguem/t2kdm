@@ -31,7 +31,7 @@ import os, sys
 import uuid
 import time
 import re
-from t2kdm import storage
+from t2kdm import storage, utils
 from t2kdm.cache import Cache
 from six import print_
 from time import sleep
@@ -1113,6 +1113,24 @@ class DIRACBackend(GridBackend):
                 else:
                     raise BackendException(e.stderr)
         return True
+
+    @cache.cached
+    def checkSE(self, remotepath, **kwargs):
+        """Return a list of replica surls of a remote logical path."""
+        lurl = self.get_lurl(remotepath)
+        return self._check_se(lurl, **kwargs)
+
+    def _check_se(self, lurl, **kwargs):
+        # Check the lurl actually exists
+        print(kwargs)
+        self._ls(lurl, directory=True)
+
+        rep = self.dirac.getReplicas(lurl)
+        self._check_return_value(rep)
+        print(rep, utils.remote_iter_recursively(lurl))
+        rep = rep["Value"]["Successful"][lurl]
+
+        return list(rep.values())
 
 
 def get_backend(config):

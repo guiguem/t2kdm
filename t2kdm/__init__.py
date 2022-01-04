@@ -22,6 +22,7 @@ else:
     backend = backends.get_backend(config)
 
     # Get functions from backend
+    checkSE = backend.checkSE
     ls = backend.ls
     iter_ls = backend.iter_ls
     ls_se = backend.ls_se

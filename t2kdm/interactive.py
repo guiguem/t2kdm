@@ -239,6 +239,51 @@ def replicate(remotepath, *args, **kwargs):
         return 0
 
 
+@_recursive("Checking", "Checked")
+def checkSE(remotepath, *args, **kwargs):
+    """Print the replicas of a file on screen."""
+    print('hello', remotepath)
+    _check_path(remotepath)
+
+    checksum = kwargs.pop("checksum", False)
+    state = kwargs.pop("state", False)
+    name = kwargs.pop("name", False)
+    distance = kwargs.pop("distance", False)
+    if distance:
+        if isinstance(distance, str):
+            reps = [
+                x[0]
+                for x in dm.iter_file_sources(
+                    remotepath, destination=distance, tape=True
+                )
+            ]
+        else:
+            reps = [x[0] for x in dm.iter_file_sources(remotepath, tape=True)]
+    else:
+        reps = dm.checkSE(remotepath, *args, **kwargs)
+    for r in reps:
+        if checksum:
+            try:
+                chk = dm.checksum(r)
+            except Exception as e:
+                chk = str(e)
+            print_(chk, end=" ")
+        if state:
+            try:
+                stat = dm.state(r)
+            except Exception as e:
+                stat = str(e)
+            print_(stat, end=" ")
+        if name:
+            se = dm.storage.get_SE(r)
+            if se is None:
+                print_("?", end=" ")
+            else:
+                print_(se.name, end=" ")
+        print_(r)
+    return 0
+
+
 @_recursive("Getting", "Downloaded")
 def get(remotepath, *args, **kwargs):
     """Download files."""

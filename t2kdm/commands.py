@@ -705,3 +705,50 @@ rename.add_argument(
     help="save a list of failed files to FILENAME (will be overwritten)",
 )
 all_commands.append(rename)
+
+
+checkSE = Command(
+    "checkSE", interactive.checkSE, "Check replicas of a remote logical path."
+)
+checkSE.add_argument(
+    "remotepath",
+    type=str,
+    nargs="?",
+    default="",
+    help="the remote logical path, e.g. '/nd280/file.txt'",
+)
+checkSE.add_argument(
+    "-c", "--checksum", action="store_true", help="display checksums of all replicas"
+)
+checkSE.add_argument(
+    "-s",
+    "--state",
+    action="store_true",
+    help="display the state of all replicas, e.g. 'ONLINE'",
+)
+checkSE.add_argument(
+    "-r",
+    "--recursive",
+    action="store_true",
+    help="recursively replicate all files and subdirectories [that match REGEX] of a directory",
+)
+checkSE.add_argument(
+    "-n", "--name", action="store_true", help="display the name of the storage element"
+)
+checkSE.add_argument(
+    "-d",
+    "--distance",
+    nargs="?",
+    metavar="SE",
+    default=False,
+    const=True,
+    help="sort replicas by distance from configured location or given storgae element",
+)
+checkSE.add_argument(
+    "-w",
+    "--where",
+    nargs=2,
+    required=True,
+    help="list the two SE to search replicas",
+)
+all_commands.append(checkSE)
