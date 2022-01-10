@@ -89,6 +89,12 @@ class GridBackend(object):
             raise TypeError("Invalid keyword arguments: %s" % (list(kwargs.keys),))
 
     def get_lurl(self, remotepath):
+        # recursively handles list (returns list in this case)
+        if isinstance(remotepath, list):
+            l = []
+            for r in remotepath:
+                l += [posixpath.normpath(self.baseurl + r)]
+            return l
         return posixpath.normpath(self.baseurl + remotepath)
 
     def _ls(self, lurl, **kwargs):
@@ -266,6 +272,12 @@ class GridBackend(object):
         """Return a list of replica surls of a remote logical path."""
         lurl = self.get_lurl(remotepath)
         return self._replicas(lurl, **kwargs)
+
+    @cache.cached
+    def replicasSE(self, remotepath, **kwargs):
+        """Return a list of replica surls of a remote logical path."""
+        lurl = self.get_lurl(remotepath)
+        return self._replicasSE(lurl, **kwargs)
 
     @cache.cached
     def is_online(self, surl):
@@ -883,8 +895,18 @@ class DIRACBackend(GridBackend):
         rep = self.dirac.getReplicas(lurl)
         self._check_return_value(rep)
         rep = rep["Value"]["Successful"][lurl]
-
         return list(rep.values())
+
+    def _replicasSE(self, lurl, **kwargs):
+        # Check the lurl actually exists and returns the list of SEs
+        self._ls(lurl, directory=True)
+
+        rep = self.dirac.getReplicas(lurl)
+        self._check_return_value(rep)
+        result = {}
+        for url in lurl:
+            result.update({url: list(rep["Value"]["Successful"][url].keys())})
+        return dict(result)
 
     def _exists(self, surl, **kwargs):
         try:
@@ -1118,19 +1140,23 @@ class DIRACBackend(GridBackend):
     def checkSE(self, remotepath, **kwargs):
         """Return a list of replica surls of a remote logical path."""
         lurl = self.get_lurl(remotepath)
-        return self._check_se(lurl, **kwargs)
+        return self._check_se(lurl, [], **kwargs)
 
-    def _check_se(self, lurl, **kwargs):
+    def _check_se(self, lurl, list_files, **kwargs):
+        """Recursively get the list of files in a folder"""
+
         # Check the lurl actually exists
-        print(kwargs)
         self._ls(lurl, directory=True)
 
-        rep = self.dirac.getReplicas(lurl)
-        self._check_return_value(rep)
-        print(rep, utils.remote_iter_recursively(lurl))
-        rep = rep["Value"]["Successful"][lurl]
-
-        return list(rep.values())
+        print(".",end="", flush=True) # some sort of progressbar
+        resp = self.dirac.listCatalogDirectory(lurl)
+        if resp["Value"]["Successful"][lurl]:
+            if len(list(resp['Value']['Successful'][lurl]['Files'].keys())) >0:
+                list_files.extend(list(resp['Value']['Successful'][lurl]['Files'].keys()))
+            if len(list(resp['Value']['Successful'][lurl]['SubDirs'].keys())) > 0:
+                for dir in list(resp['Value']['Successful'][lurl]['SubDirs'].keys()):
+                    self._check_se(str(dir), list_files)
+        return list_files
 
 
 def get_backend(config):

@@ -718,22 +718,16 @@ checkSE.add_argument(
     help="the remote logical path, e.g. '/nd280/file.txt'",
 )
 checkSE.add_argument(
-    "-c", "--checksum", action="store_true", help="display checksums of all replicas"
-)
-checkSE.add_argument(
-    "-s",
-    "--state",
-    action="store_true",
-    help="display the state of all replicas, e.g. 'ONLINE'",
-)
-checkSE.add_argument(
     "-r",
     "--recursive",
     action="store_true",
     help="recursively replicate all files and subdirectories [that match REGEX] of a directory",
 )
 checkSE.add_argument(
-    "-n", "--name", action="store_true", help="display the name of the storage element"
+    "-o",
+    "--output",
+    metavar="FILENAME",
+    help="save a list of failed files to FILENAME (will be overwritten)",
 )
 checkSE.add_argument(
     "-d",
@@ -747,8 +741,11 @@ checkSE.add_argument(
 checkSE.add_argument(
     "-w",
     "--where",
-    nargs=2,
+    nargs="+",
     required=True,
     help="list the two SE to search replicas",
+)
+checkSE.add_argument(
+    "-v", "--verbose", action="store_true", help="print status messages to the screen"
 )
 all_commands.append(checkSE)

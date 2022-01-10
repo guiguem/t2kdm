@@ -11,6 +11,7 @@ import os, signal
 import t2kdm as dm
 from t2kdm import storage
 from t2kdm import utils
+import json
 from t2kdm import backends
 
 
@@ -239,48 +240,82 @@ def replicate(remotepath, *args, **kwargs):
         return 0
 
 
-@_recursive("Checking", "Checked")
 def checkSE(remotepath, *args, **kwargs):
-    """Print the replicas of a file on screen."""
-    print('hello', remotepath)
+    """Check replicas on SE and compare the results with a list ("where")."""
     _check_path(remotepath)
 
-    checksum = kwargs.pop("checksum", False)
-    state = kwargs.pop("state", False)
-    name = kwargs.pop("name", False)
-    distance = kwargs.pop("distance", False)
-    if distance:
-        if isinstance(distance, str):
-            reps = [
-                x[0]
-                for x in dm.iter_file_sources(
-                    remotepath, destination=distance, tape=True
-                )
-            ]
-        else:
-            reps = [x[0] for x in dm.iter_file_sources(remotepath, tape=True)]
-    else:
-        reps = dm.checkSE(remotepath, *args, **kwargs)
+    list_se_test = kwargs.pop("where", False)
+    output_filename = kwargs.pop("output", False)
+    verbose = kwargs.pop("verbose", False)
+    if verbose:
+        print_(f"Recursively getting files from {remotepath}")
+    reps = dm.checkSE(remotepath, *args, **kwargs)
+    print("")
+    if verbose:
+        print_(f"Found {len(list(reps))} files")
+
+    # Now check the presence of the replicas on the desired SEs
+    list_r = []
     for r in reps:
-        if checksum:
-            try:
-                chk = dm.checksum(r)
-            except Exception as e:
-                chk = str(e)
-            print_(chk, end=" ")
-        if state:
-            try:
-                stat = dm.state(r)
-            except Exception as e:
-                stat = str(e)
-            print_(stat, end=" ")
-        if name:
-            se = dm.storage.get_SE(r)
-            if se is None:
-                print_("?", end=" ")
+        list_r.append("/../"+str(r)) # since /t2k.org is added to the path anyway, we need to take it off (not good solution)
+    ok_files = []
+    not_ok_files = {}
+    iterator = 0
+
+    len_chunk = 500
+    if verbose:
+        print(f"Finding replicas by chunks of {len_chunk}")
+    while iterator < len(list_r):
+        sub_list_r = []
+        for i in range(len_chunk):
+            if iterator < len(list_r):
+                sub_list_r.append(list_r[iterator])
+            iterator += 1
+        print(".", end="", flush=True) # some sort of progress bar
+        result = dm.replicasSE(sub_list_r)
+        for file, ses in iter(result.items()):
+            if set(ses).intersection(list_se_test) == set(list_se_test):
+                ok_files.append(file)
             else:
-                print_(se.name, end=" ")
-        print_(r)
+                miss_ses = set(ses).intersection(list_se_test).symmetric_difference(list_se_test)
+
+                not_ok_files.update({str(file[:]): list(miss_ses)})
+    print_(f"\nMissing files: {len(not_ok_files.keys())} out of {len(list_r)}")
+
+    # Saving files in the file
+    if output_filename and isinstance(output_filename, str):
+        print_(f"Saving missing files in {output_filename}")
+        with open(output_filename, "w") as write_file:
+            json.dump(not_ok_files, write_file, indent=4)
+
+
+    #####
+    # works but slow --------
+    # for r in reps:
+    #     if checksum:
+    #         try:
+    #             chk = dm.checksum(r)
+    #         except Exception as e:
+    #             chk = str(e)
+    #         print_(chk, end=" ")
+    #     if state:
+    #         try:
+    #             stat = dm.state(r)
+    #         except Exception as e:
+    #             stat = str(e)
+    #         print_(stat, end=" ")
+    #     if name:
+    #         se = dm.storage.get_SE(r)
+    #         if se is None:
+    #             print_("?", end=" ")
+    #         else:
+    #             print_(se.name, end=" ")
+    #     if "/t2k.org/nd280/production006/T/pc2/ND280/00014000_00014999/reco" in r:
+    #         # print(f"-> {'/../'+str(r)}")
+    #         rep = dm.replicasSE("/../"+str(r))
+    #         print_(r, rep)
+    # works but slow --------
+
     return 0
 
 
